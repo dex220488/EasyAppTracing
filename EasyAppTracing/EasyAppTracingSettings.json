@@ -1,0 +1,21 @@
+{
+  "TracingId": "Demo",
+  "EnableInformationTrace": "true",
+  "EnableErrorTrace": "true",
+  "FileSettings": {
+    "Enable": "true",
+    "FilePath": "",
+    "MaxStringLength": "1000"
+  },
+  "EmailSettings": {
+    "Enable": "true",
+    "FromEmail": "from_demo@demo.com",
+    "ToEmail": "to_demo@demo.com",
+    "SmtpServer": "1.1.1.1",
+    "MaxStringLength": "1000"
+  },
+  "ElasticSearchSettings": {
+    "Enable": "true",
+    "NodeUri": "http://192.168.192.135:9200"
+  }
+}
