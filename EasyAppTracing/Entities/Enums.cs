@@ -6,7 +6,8 @@
         {
             Serilog,
             InfoTracing,
-            ErrorTracing
+            ErrorTracing,
+            SuccessTracing
         }
     }
 }

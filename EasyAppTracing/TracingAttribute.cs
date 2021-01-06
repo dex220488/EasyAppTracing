@@ -17,26 +17,33 @@ namespace EasyAppTracing
         private readonly ILogger emailTracing;
         private readonly ILogger elasticSearchTracing;
         private readonly Settings settings;
+        private readonly Services.Generic.Service generic;
 
         public TracingAttribute()
         {
             settings = new Settings();
+            generic = new Services.Generic.Service();
 
             string infoTracingFilePath = settings.GetPath(Entities.Enums.TraceFileType.InfoTracing);
             string errorTracingFilePath = settings.GetPath(Entities.Enums.TraceFileType.ErrorTracing);
             serilogFilePath = settings.GetPath(Entities.Enums.TraceFileType.Serilog);
 
-            fileTracing = new LoggerConfiguration()
+            if (settings.GlobalSettings.FileSettings.Enable)
+            {
+                fileTracing = new LoggerConfiguration()
                 .MinimumLevel.Debug()
                 .WriteTo.File(infoTracingFilePath, Serilog.Events.LogEventLevel.Information, rollingInterval: RollingInterval.Day, shared: true)
                 .WriteTo.File(errorTracingFilePath, Serilog.Events.LogEventLevel.Error, rollingInterval: RollingInterval.Day, shared: true)
                 .Destructure.ToMaximumStringLength(settings.GlobalSettings.FileSettings.MaxStringLength)
                 .CreateLogger();
+            }
 
-            emailTracing = new LoggerConfiguration()
+            if (settings.GlobalSettings.EmailSettings.Enable)
+            {
+                emailTracing = new LoggerConfiguration()
                  .WriteTo.Email(new EmailConnectionInfo
                  {
-                     IsBodyHtml = true,
+                     IsBodyHtml = settings.GlobalSettings.EmailSettings.IsBodyHtml,
                      FromEmail = settings.GlobalSettings.EmailSettings.FromEmail,
                      ToEmail = settings.GlobalSettings.EmailSettings.ToEmail,
                      MailServer = settings.GlobalSettings.EmailSettings.SmtpServer,
@@ -45,8 +52,11 @@ namespace EasyAppTracing
                 batchPostingLimit: 1)
                 .Destructure.ToMaximumStringLength(settings.GlobalSettings.EmailSettings.MaxStringLength)
                 .CreateLogger();
+            }
 
-            elasticSearchTracing = new LoggerConfiguration()
+            if (settings.GlobalSettings.ElasticSearchSettings.Enable)
+            {
+                elasticSearchTracing = new LoggerConfiguration()
                 .WriteTo.Elasticsearch(new ElasticsearchSinkOptions(new Uri(settings.GlobalSettings.ElasticSearchSettings.NodeUri))
                 {
                     AutoRegisterTemplate = true,
@@ -54,6 +64,7 @@ namespace EasyAppTracing
                     IndexFormat = $"{settings.GlobalSettings.TracingId}-{DateTime.Now:yyyy-MM-dd}"
                 })
                 .CreateLogger();
+            }
         }
 
         public override void OnEntry(MethodAdviceContext context)
@@ -72,7 +83,7 @@ namespace EasyAppTracing
 
                 if (settings.GlobalSettings.EmailSettings.Enable)
                 {
-                    //
+                    emailTracing.Information(generic.SetEmailContent(Entities.Enums.TraceFileType.InfoTracing, settings: settings, targetMethod: context.TargetMethod.ToString(), content: inputParams));
                 }
 
                 if (settings.GlobalSettings.ElasticSearchSettings.Enable)
@@ -103,7 +114,11 @@ namespace EasyAppTracing
 
                 if (settings.GlobalSettings.EmailSettings.Enable)
                 {
-                    //
+                    string message = inputParams;
+                    message = $"{message}; Exception Message => {ex.Message}; StackTrace => {ex.StackTrace}";
+                    message = $"{message}; Inner Exceptions Details => {exceptionsDetails}";
+
+                    emailTracing.Error(generic.SetEmailContent(Entities.Enums.TraceFileType.ErrorTracing, settings: settings, targetMethod: context.TargetMethod.ToString(), content: message));
                 }
 
                 if (settings.GlobalSettings.ElasticSearchSettings.Enable)
@@ -137,7 +152,7 @@ namespace EasyAppTracing
 
                         if (settings.GlobalSettings.EmailSettings.Enable)
                         {
-                            //
+                            emailTracing.Error(generic.SetEmailContent(Entities.Enums.TraceFileType.SuccessTracing, settings: settings, targetMethod: context.TargetMethod.ToString(), content: outputParams));
                         }
 
                         if (settings.GlobalSettings.ElasticSearchSettings.Enable)
@@ -168,7 +183,17 @@ namespace EasyAppTracing
 
             if (settings.GlobalSettings.EmailSettings.Enable)
             {
-                //
+                if (settings.GlobalSettings.EmailSettings.Enable)
+                {
+                    if (isError)
+                    {
+                        emailTracing.Error(generic.SetEmailContent(traceType: Entities.Enums.TraceFileType.ErrorTracing, settings: settings, targetMethod: targetMethod, content: traceMessage));
+                    }
+                    else
+                    {
+                        emailTracing.Information(generic.SetEmailContent(traceType: Entities.Enums.TraceFileType.InfoTracing, settings: settings, targetMethod: targetMethod, content: traceMessage));
+                    }
+                }
             }
 
             if (settings.GlobalSettings.ElasticSearchSettings.Enable)

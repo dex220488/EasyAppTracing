@@ -16,7 +16,15 @@ namespace EasyAppTracing.Entities.TraceSettings
 
         public string GetPath(Entities.Enums.TraceFileType fileType)
         {
-            string filePath = GlobalSettings.FileSettings.FilePath;
+            string filePath;
+            if (fileType == Enums.TraceFileType.Serilog)
+            {
+                filePath = GlobalSettings.SerilogFilePath;
+            }
+            else
+            {
+                filePath = GlobalSettings.FileSettings.FilePath;
+            }
 
             if (String.IsNullOrEmpty(filePath))
             {

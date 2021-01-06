@@ -5,6 +5,7 @@
         public bool Enable { get; set; }
         public string FromEmail { get; set; }
         public string ToEmail { get; set; }
+        public bool IsBodyHtml { get; set; }
         public string SmtpServer { get; set; }
         public int MaxStringLength { get; set; }
     }
